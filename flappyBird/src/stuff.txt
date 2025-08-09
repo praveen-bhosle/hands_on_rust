@@ -1,0 +1,20 @@
+lib used to build game: bracket_lib 
+
+bracket_lib provides with  GameState trait. 
+We implement that trait for our State struct. 
+GameState trait needs any struct implementing it must have a method tick(). 
+tick() is the function that is called to handle the change of game state. 
+Game loop runs by calling tick().
+
+fn tick(&mut self , ctx : &mut BTerm ) 
+ctx -> context of the game window. 
+ctx.cls() -> clears the window. 
+ctx.print(x,y,string) -> to print anything to the window.  
+x,y are coordinates. 
+
+Handling errors in rust. 
+1. use ? at the end of the code, this needs the return  type of the fn to be of type Result. 
+2. use .unwrap() ,  this instantly crashes the program if any error occurs. 
+3. use match. 
+
+bracket_lib provides us with Result type BError . 

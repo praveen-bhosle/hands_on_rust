@@ -1,0 +1,28 @@
+read line by line in rust. 
+use stdin().read_line( pass a mutable reference to a string ) 
+stdin() gives us a Stdin object  which has necessary methods to handle inputs. 
+.read_line() is one of the methods that reads input line unless we reach \n. 
+
+When we do .read_line() to read that line in string then string gets in plus also the new line char comes too. 
+We can get rid of that exra \n char by using .trim() method to remove leading and trailing spaces.
+
+To read string char by chars : 
+for c  in s.chars() ; 
+To convert char to its ascii code , c as u8 works.
+
+why not do for x in arr ,  becuase this consumes the arr and takes ownership of it. 
+And then we cannot use arr in our code. arr is moved so u cant further borrow it. 
+So therefore we borrow the arr instead , for x in &arr.
+
+
+Declaring arrays 
+let arr = [1,2,34] ; 
+
+declaring vecs using vec! 
+let arr = vec![1,3,3,4] ; 
+
++ concatenation expects  left side to be &String and right side to be &str.
+
+When u declare a string literal it is already a reference. 
+let a = "praveen" , here a is of type &'static  str 
+static -> leaves for the whole program. 
