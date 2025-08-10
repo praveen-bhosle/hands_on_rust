@@ -1,152 +1,125 @@
+use std::{collections::btree_map::Keys, io} ; 
 use bracket_lib::prelude::* ; 
 
-enum GameMode { 
+const FRAME_TIME:f32  = 60.0 ; 
+
+#[derive(PartialEq)]
+enum GameMode  { 
     Menu , 
     Playing , 
-    End 
+    Dead 
 }
 
-const SCREEN_WIDTH: i32 = 80 ; 
-const SCREEN_HEIGHT: i32 = 50 ; 
-const FRAME_DURATION: f32 = 75.0 ; 
+struct Player { 
+   x : i8 , 
+   y : i8 , 
+   velocity_vertical :  i8 
+} 
 
-struct State { 
-    mode: GameMode , 
-	frame_time : f32 , 
-	player: Player , 
-	obstacle : Obstacle 
+impl Player { 
+    fn new() -> Self { 
+        Self { 
+            x : 10 , 
+            y : 10 ,
+            velocity_vertical : 0 
+        }
+    }
 }
+
+struct Obstacle { 
+   x: i8 , 
+   y: i8 , 
+   velocity_horizontal : i8 
+}
+
+struct State {  
+    mode : GameMode , 
+    frame_time: f32 , 
+    player : Player , 
+    //obstacle : Obstacle 
+} 
 
 impl State { 
-    fn new() -> Self { 
-        State { 
-		    player: Player::new(5,25), 
-            mode: GameMode::Menu , 
-			frame_time : 0.0 
+    fn new()  -> Self { 
+        Self { 
+            mode : GameMode::Menu ,  
+            frame_time : 0.0  , 
+            player : Player::new()  
         }
-    } 
-	
-	fn restart(&mut self){  
-	   self.player = Player::new(5,25) ; 
-	   self.frame_time = 0.0 ; 
-       self.mode = GameMode::Playing ; 
-	}
+    }
 
-	fn main_menu(&mut self , ctx: &mut BTerm) {   
-       ctx.cls() ; 
-	   ctx.print_centered(5,"Welcome to Flappy Dragon") ; 
-	   ctx.print_centered(8,"(P) Play Game") ; 
-	   ctx.print_centered(9,"(Q) Quit Game") ; 
-	   
-	   if let Some(key) = ctx.key {   
-	      match key {   
-		    VirtualKeyCode::P => self.restart() , 
-			VirtualKeyCode::Q => ctx.quitting = true , 
-			_ => {} 
-	     } 
-	  }
-   }
-
-   fn dead(&mut self , ctx: &mut BTerm) { 
-       ctx.cls(); 
-	   ctx.print_centered(5,"You are dead."); 
-	   ctx.print_centered(8,"(P) Play Again"); 
-	   ctx.print_centered(9,"(Q) Quit Game"); 
-	   
-	   if let Some(key) = ctx.key { 
-	      match key {  
-		    VirtualKeyCode::P => self.restart() , 
-			VirtualKeyCode::Q => ctx.quitting = true, 
-			_ => {}  
-		  } 
-	   }
-   } 
-
-   fn play(&mut self , ctx: &mut BTerm) {  
-      ctx.cls_bg(NAVY); 
-	  self.frame_time += ctx.frame_time_ms ; 
-	 // if self.frame_time >= FRAME_DURATION {  
-	   //   self.frame_time = 0.0 ; 
-		  self.player.gravity_and_move() ; 
-	 // }
-
-	  if let Some(VirtualKeyCode::Space) = ctx.key { 
-	     self.player.flap() ; 
-	  }
-	  self.player.render(ctx);
-	  ctx.print(0,0,"Press SPACE to flap.") ; 
-	  if self.player.y > SCREEN_HEIGHT {    
-	      self.mode = GameMode::End ; 
-	  }
-   }
+    fn render_player(&self , ctx : &mut BTerm) {    
+        ctx.print(self.player.x, self.player.y , "Bird"); 
+    }
    
+    fn make_bird_fall(&mut self) {  
+        if self.player.y == 50 { 
+            self.mode = GameMode::Dead ;  
+            self.reset_bird_position(); 
+        }
+        self.player.velocity_vertical += 1 ; 
+        self.player.y += self.player.velocity_vertical ;     
+    } 
+
+    fn flap(&mut self) { 
+        if self.player.y >= 15 { 
+         self.player.y -= 1 ;  
+        }   
+    }
+
+    fn  reset_bird_position( &mut self ) {  
+        self.player.y = 10 ; 
+    }
+
 }
 
 impl GameState for State { 
-    fn tick(&mut self , ctx: &mut BTerm ) { 
+    fn tick(&mut self, ctx: &mut BTerm) { 
         ctx.cls() ; 
-        ctx.print(1,1,"Hello bracket terminal") ;  
-        match self.mode { 
-            GameMode::Menu => self.main_menu(ctx) , 
-            GameMode::End => self.dead(ctx) , 
-            GameMode::Playing => self.play(ctx) 
+        ctx.print(1, 1, "hi praveen"); 
+        ctx.print(1, 3, ctx.frame_time_ms); 
+        if self.mode == GameMode::Playing { 
+        self.frame_time += ctx.frame_time_ms ;  } 
+        if self.frame_time > FRAME_TIME {  
+            self.make_bird_fall(); 
+            self.frame_time = 0.0 ; 
+        }
+        match self.mode {  
+            GameMode::Menu    =>     ctx.print(1,2, "this is main menu.") , 
+            GameMode::Playing =>    { ctx.print(1,2,"this is playing.") ;  self.render_player(ctx);  } , 
+            GameMode::Dead    =>     ctx.print(1,2,"This is dead ")
+        }
+        let key_pressed = ctx.key  ; 
+        match key_pressed { 
+            Some(key) =>    { 
+                match key  {  
+                    VirtualKeyCode::P => { ctx.print_centered(10, "P was pressed") ; 
+                     self.mode = GameMode::Playing ; 
+                    },
+                    VirtualKeyCode::M => { 
+                        ctx.print_centered(10, "M was pressed") ; 
+                        self.mode = GameMode::Menu ; 
+                    } , 
+                    VirtualKeyCode::D => { 
+                        ctx.print_centered(10, "D was pressed") ; 
+                        self.mode = GameMode::Dead ; 
+                    } ,  
+                    VirtualKeyCode::Space => { 
+                        self.flap(); 
+                    }
+                    _ => {} 
+                }
+            }  ,
+            None  => {}  
         }
     }
-} 
-
-struct Player {   
-   x: i32 , 
-   y: i32 , 
-   velocity: f32 
-} 
-
-impl Player  {  
-   fn new(x:i32 , y:i32)  -> Self  {  
-     Player { x , y , velocity : 0.0 } 
-   } 
-   
-   fn render(&mut self , ctx:&mut BTerm) { 
-     ctx.set(0,self.y,YELLOW,BLACK,to_cp437('@')); 
-   } // try changin the values passed here later to know what they exactly do. 
-
-   fn gravity_and_move(&mut self) { 
-      if self.velocity < 2.0 { 
-	      self.velocity += 0.2 
-      }  
-
-	  self.y += self.velocity as i32 ;
-	  self.x += 1 ; 
-
-	  if self.y < 0 { 
-	     self.y = 0 ; 
-	  } 
-   }
-
-   fn flap(&mut self) { 
-      self.velocity = -2.0 ; 
-   } 
-
-} 
-
-struct Obstacle {   
-   x:i32 , 
-   y: i32 , 
-   velocityH: f32
-} 
- 
-impl Obstacle {   
-  fn new(x:i32 , y:i32)  {   
-    Self { x ,y , velocityH : 0.0 } ;  
-  }
-  fn render(&self ) {   
-     ctx.set( self.x , self.y , RED,BLACK,to_cp437('|') ;  
-  } 
-} 
+}
 
 
-fn main()  -> BError  {  
+fn  main() -> BError {   
+      
     let context = BTermBuilder::simple80x50()
-        .with_title("flappy") 
-        .build()?  ;
-    main_loop(context,State::new())  
+                                .with_title("flappy")
+                                .build()? ; 
+    main_loop(context , State::new())   
 }
