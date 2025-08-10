@@ -26,3 +26,8 @@ let arr = vec![1,3,3,4] ;
 When u declare a string literal it is already a reference. 
 let a = "praveen" , here a is of type &'static  str 
 static -> leaves for the whole program. 
+
+
+for v in list 
+// this creates an  mutable reference
+// list.iter() creates immutable reference
