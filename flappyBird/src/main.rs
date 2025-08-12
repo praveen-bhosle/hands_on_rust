@@ -1,7 +1,6 @@
-use std::{collections::btree_map::Keys, io} ; 
 use bracket_lib::prelude::* ; 
 
-const FRAME_TIME:f32  = 60.0 ; 
+const FRAME_TIME:f32  = 300.0 ; 
 
 #[derive(PartialEq)]
 enum GameMode  { 
@@ -12,16 +11,14 @@ enum GameMode  {
 
 struct Player { 
    x : i8 , 
-   y : i8 , 
-   velocity_vertical :  i8 
+   y : i8 
 } 
 
 impl Player { 
     fn new() -> Self { 
         Self { 
             x : 10 , 
-            y : 10 ,
-            velocity_vertical : 0 
+            y : 10   
         }
     }
 }
@@ -29,14 +26,22 @@ impl Player {
 struct Obstacle { 
    x: i8 , 
    y: i8 , 
-   velocity_horizontal : i8 
 }
+
+impl Obstacle {    
+    fn new() -> Self  {
+        let y = fastrand::i8(10..49) ; 
+        Self { x: 79  , y } 
+    } 
+}
+
 
 struct State {  
     mode : GameMode , 
     frame_time: f32 , 
     player : Player , 
-    //obstacle : Obstacle 
+    obstacle : Obstacle , 
+    frame_time2 : f32 
 } 
 
 impl State { 
@@ -44,7 +49,9 @@ impl State {
         Self { 
             mode : GameMode::Menu ,  
             frame_time : 0.0  , 
-            player : Player::new()  
+            frame_time2 : 0.0  , 
+            player : Player::new()  , 
+            obstacle : Obstacle::new()  
         }
     }
 
@@ -53,16 +60,17 @@ impl State {
     }
    
     fn make_bird_fall(&mut self) {  
-        if self.player.y == 50 { 
+        if self.player.y >= 50  { 
             self.mode = GameMode::Dead ;  
             self.reset_bird_position(); 
+            return ; 
         }
-        self.player.velocity_vertical += 1 ; 
-        self.player.y += self.player.velocity_vertical ;     
+
+        self.player.y += 2 ;     
     } 
 
     fn flap(&mut self) { 
-        if self.player.y >= 15 { 
+        if self.player.y >= 10 { 
          self.player.y -= 1 ;  
         }   
     }
@@ -71,22 +79,61 @@ impl State {
         self.player.y = 10 ; 
     }
 
+    fn  render_obstacle(&self , ctx : &mut BTerm) {  
+        ctx.print(self.obstacle.x, self.obstacle.y, "Obstacle"); 
+    } 
+    
+    fn move_obstacle(&mut self ) { 
+        if self.obstacle.x == 0  {  self.reset_obstacle();  return ;   }
+        self.obstacle.x -= 1  ; 
+    }
+
+    fn collission(&mut self) -> bool  {  
+         if self.obstacle.y == self.player.y  { 
+            let diff = self.obstacle.x-self.player.x  ; 
+            println!("diff is {}" , diff ) ; 
+            if diff<4  && diff > -8   { 
+                return true ; 
+            }
+         }
+         return  false ; 
+    }
+
+    fn reset_obstacle(&mut self) { 
+        let y  = fastrand::i8(10..49) ; 
+        self.obstacle.x = 79 ; 
+        self.obstacle.y = y ; 
+    }
+
 }
 
 impl GameState for State { 
     fn tick(&mut self, ctx: &mut BTerm) { 
+        println!("{}",self.player.y) ; 
         ctx.cls() ; 
         ctx.print(1, 1, "hi praveen"); 
         ctx.print(1, 3, ctx.frame_time_ms); 
         if self.mode == GameMode::Playing { 
-        self.frame_time += ctx.frame_time_ms ;  } 
+        self.frame_time += ctx.frame_time_ms ;
+        self.frame_time2 += ctx.frame_time_ms ;  } 
+        if self.frame_time2 > FRAME_TIME / 2.0  {  
+            self.move_obstacle(); 
+            self.frame_time2 = 0.0 ; 
+        }
         if self.frame_time > FRAME_TIME {  
-            self.make_bird_fall(); 
+            self.make_bird_fall();  
             self.frame_time = 0.0 ; 
         }
         match self.mode {  
             GameMode::Menu    =>     ctx.print(1,2, "this is main menu.") , 
-            GameMode::Playing =>    { ctx.print(1,2,"this is playing.") ;  self.render_player(ctx);  } , 
+            GameMode::Playing =>    { 
+                ctx.print(1,2,"this is playing.") ;  
+                self.render_player(ctx);   
+                self.render_obstacle(ctx);  
+                let x  = self.collission() ; 
+                println!("collided {}" , x ) ;  
+                if self.collission() { self.mode = GameMode::Dead ;  }                 
+            } , 
             GameMode::Dead    =>     ctx.print(1,2,"This is dead ")
         }
         let key_pressed = ctx.key  ; 
@@ -111,13 +158,13 @@ impl GameState for State {
                 }
             }  ,
             None  => {}  
+
         }
     }
 }
 
 
 fn  main() -> BError {   
-      
     let context = BTermBuilder::simple80x50()
                                 .with_title("flappy")
                                 .build()? ; 
